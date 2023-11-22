@@ -45,6 +45,8 @@ def findSurface(input, minElev, maxElev):
         elevations = hist[1][largest_bin:largest_bin + 3]
     else:
         print("Weird depth distribution of points, check visually")
+        empty_df = pd.DataFrame()
+        return empty_df
 
     df_subset = df[(df["elev"] > elevations[0]) & (df["elev"] < elevations[min(len(elevations) - 1, 4)])]
 
@@ -167,6 +169,9 @@ def convert(dataDir, utm=True, removeLand=True, removeIrrelevant=True, interval=
 
                 # This finds the maximum confidence value of any category
                 df_data['signal_conf_ph'] = np.amax(IS2_atl03_mds[gtx]['heights']["signal_conf_ph"], axis=1)
+                
+                #Add a photon index
+                df_data['ph_index'] = df_data.index
 
                 # Put reference information in pandas df
 
@@ -254,14 +259,14 @@ def convert(dataDir, utm=True, removeLand=True, removeIrrelevant=True, interval=
                     df['lat'] = df['lat_ph']  # Keeping lat and lon here for reference
                     df['lon'] = df['lon_ph']
                     df = df.drop(['lat_ph', 'lon_ph'], axis=1)
-                    df = df[['x', 'y', 'lon', 'lat', 'elev', 'tide', 'signal_conf_ph',
-                             'class']]  # Change the order of the columns
+                    df = df[['ph_index', 'x', 'y', 'lon', 'lat', 'elev', 'tide',
+                             'signal_conf_ph', 'class']]  # Change the order of the columns
                 else:
                     df['lat'] = df['lat_ph']
                     df['lon'] = df['lon_ph']
                     df = df.drop(['lat_ph', 'lon_ph'], axis=1)
                     df = df[
-                        ['lon', 'lat', 'elev', 'tide', 'signal_conf_ph', 'class']]  # Change the order of the columns
+                        ['ph_index', 'lon', 'lat', 'elev', 'tide', 'signal_conf_ph', 'class']]  # Change the order of the columns
 
                 # Do normalization so all values are between 0 and 1
                 # df = (df - df.min()) / (df.max() - df.min())
@@ -278,6 +283,9 @@ def convert(dataDir, utm=True, removeLand=True, removeIrrelevant=True, interval=
                     df_segment = df[(df['y'] >= y1) & (df['y'] < y2)].copy()
                     if not df_segment.empty:
                         df_segment = findSurface(df_segment, minElev, maxElev)
+                        # If there is a weird distribution of points, skip this segment.
+                        if df_segment.empty:
+                            continue
                     df_segment_all = pd.concat([df_segment_all, df_segment], ignore_index=True)
                     y1 = y2
                 df = df_segment_all
