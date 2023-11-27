@@ -72,9 +72,9 @@ class PartNormalDataset(Dataset):
             cls = np.array([0]).astype(np.int32)
             data = np.loadtxt(fn).astype(np.float64)
             if not self.conf_channel:
-                point_set = data[:, [0, 1, 2]]  # use x,y,elev
+                point_set = data[:, [1, 2, 3]]  # use x,y,elev
             else:
-                point_set = data[:, [0, 1, 2, 6]]  # use x,y,elev,signal_conf
+                point_set = data[:, [1, 2, 3, 7]]  # use x,y,elev,signal_conf
                 point_set[:, -1] = point_set[:, -1].astype(np.int32)
 
             length = len(point_set)
@@ -222,25 +222,28 @@ def main(args):
                     cur_mask = point_set_normalized_mask[i, :]
                     cur_points = cur_points[cur_mask, :]
                     # create a new point cloud array
-                    output_points = np.zeros((cur_points.shape[0], 8)).astype(np.float64)
-                    output_points[:, 0:3] = cur_points[:, 0:3]
+                    output_points = np.zeros((cur_points.shape[0], 9)).astype(np.float64)
+                    data = np.loadtxt(fn[i]).astype(np.float64)
+                    ph_index = data[:, [0]]
+                    output_points[:, 0:1] = ph_index
+                    output_points[:, 1:4] = cur_points[:, 0:3]
                     # recover the point coordinates
                     cur_pc_min = pc_min[i, :]
                     cur_pc_max = pc_max[i, :]
                     # recover other info
-                    data = np.loadtxt(fn[i]).astype(np.float64)
-                    other_data = data[:, [3, 4, 5]]
+                    other_data = data[:, [4,5,6]]
                     # output points
-                    output_points[:, 0:3] = pc_denormalize(output_points[:, 0:3], cur_pc_min, cur_pc_max)
+                    output_points[:, 1:4] = pc_denormalize(output_points[:, 1:4], cur_pc_min, cur_pc_max)
                     # output other info
-                    output_points[:, 3:6] = other_data
+                    output_points[:, 4:7] = other_data
                     # output class and probability
-                    output_points[:, 6] = cur_pred_prob_mask[i]
-                    output_points[:, 7] = cur_pred_val_mask[i]
+                    output_points[:, 7] = cur_pred_prob_mask[i]
+                    output_points[:, 8] = cur_pred_val_mask[i]
+
                     # output file
                     output_file = os.path.splitext(os.path.basename(fn[i]))[0] + '.csv'
                     output_path = os.path.join(output_dir, output_file)
-                    header = 'x,y,elev,lon,lat,class,prob,pred'
+                    header = 'ph_index,x,y,elev,lon,lat,class,prob,pred'
                     np.savetxt(output_path, output_points, delimiter=',', header=header, fmt='%.4f')
 
     # Combine all the sub-files to the original beam files
