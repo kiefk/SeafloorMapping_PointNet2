@@ -30,19 +30,35 @@ def findSurface(input, minElev, maxElev):
     hist = np.histogram(df["elev"], int(maxElev - minElev))
     largest_bin = np.argmax(hist[0])
 
-    # Get subset of histogram, +/- 2m around the largest bin
+    # Get a subset of the histogram around the largest bin.
+    # If possible get bin edges for four bins:
+    #       The two bins before the largest bin, the largest bin, 
+    #       and the bin after the largest bin.
     if largest_bin >= 2 and largest_bin <= len(hist[0]) - 2:
-        numbers = hist[0][largest_bin - 2:largest_bin + 3]
+        # numbers = hist[0][largest_bin - 2:largest_bin + 3]
         elevations = hist[1][largest_bin - 2:largest_bin + 3]
+
+    #Else, if the largest bin is the last histogram bin, only get bin edges
+    #   for the two bins before the largest bin, and the largest histogram bin
     elif largest_bin == len(hist[0]) - 1:
-        numbers = hist[0][largest_bin - 2:largest_bin + 3]
-        elevations = hist[1][largest_bin - 2:largest_bin + 3]
+        # numbers = hist[0][largest_bin - 2:largest_bin + 3]
+        elevations = hist[1][largest_bin - 2:largest_bin + 2]
+
+    #Else, if the largest bin is the second histogram bin, only get bin edges
+    #   for the bin before the largest bin, the largest histogram bin, 
+    #   and the bin after the largest bin.        
     elif largest_bin == 1:  # This can happen when there is no land in the dataset, and no atmospheric noise
-        numbers = hist[0][largest_bin - 1:largest_bin + 3]
+        # numbers = hist[0][largest_bin - 1:largest_bin + 3]
         elevations = hist[1][largest_bin - 1:largest_bin + 3]
-    elif largest_bin == 1:
-        numbers = hist[0][largest_bin:largest_bin + 3]
+
+    #Else, if the largest bin is the first histogram bin, only get bin edges
+    #   for the largest histogram bin, and the bin after the largest bin.   
+    elif largest_bin == 0:
+        # numbers = hist[0][largest_bin:largest_bin + 3]
         elevations = hist[1][largest_bin:largest_bin + 3]
+
+    # OTherwise, catch any exceptions where there are not two bins before and
+    #   one bin after the largest bin.
     else:
         print("Weird depth distribution of points, check visually")
         empty_df = pd.DataFrame()
