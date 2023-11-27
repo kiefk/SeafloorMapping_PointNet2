@@ -34,6 +34,8 @@ def findSurface(input, minElev, maxElev):
     # If possible get bin edges for four bins:
     #       The two bins before the largest bin, the largest bin, 
     #       and the bin after the largest bin.
+    #This checks if there are two bins before the largest bin and 
+    #   at least one bin after it as well. 
     if largest_bin >= 2 and largest_bin <= len(hist[0]) - 2:
         # numbers = hist[0][largest_bin - 2:largest_bin + 3]
         elevations = hist[1][largest_bin - 2:largest_bin + 3]
@@ -47,13 +49,13 @@ def findSurface(input, minElev, maxElev):
     #Else, if the largest bin is the second histogram bin, only get bin edges
     #   for the bin before the largest bin, the largest histogram bin, 
     #   and the bin after the largest bin.        
-    elif largest_bin == 1:  # This can happen when there is no land in the dataset, and no atmospheric noise
+    elif largest_bin == 1: 
         # numbers = hist[0][largest_bin - 1:largest_bin + 3]
         elevations = hist[1][largest_bin - 1:largest_bin + 3]
 
     #Else, if the largest bin is the first histogram bin, only get bin edges
     #   for the largest histogram bin, and the bin after the largest bin.   
-    elif largest_bin == 0:
+    elif largest_bin == 0:  # This can happen when there is no land in the dataset, and no atmospheric noise
         # numbers = hist[0][largest_bin:largest_bin + 3]
         elevations = hist[1][largest_bin:largest_bin + 3]
 
