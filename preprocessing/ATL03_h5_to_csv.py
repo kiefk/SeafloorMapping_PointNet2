@@ -211,7 +211,7 @@ def convert(dataDir, utm=True, removeLand=True, removeIrrelevant=True, interval=
                 # Remove data with low confidence - 3 is medium confidence, 4 is high confidence
                 df_data = df_data[df_data['signal_conf_ph'] >= 3]
 
-                # Interpolate geoid heights to photon latitudesC
+                # Interpolate geoid heights to photon latitudes
                 x = df_ref['ref_lat'].to_numpy()
                 y = df_ref['ref_geoid'].to_numpy()
                 f = scipy.interpolate.interp1d(x, y)
@@ -256,9 +256,16 @@ def convert(dataDir, utm=True, removeLand=True, removeIrrelevant=True, interval=
                     df_data["x"], df_data["y"] = transformer.transform(df_data["lat_ph"].to_numpy(),
                                                                        df_data["lon_ph"].to_numpy())
 
-                # Remove irrelevant photons (deeper than 50m, higher than 20m)
+                #Add along track distance to use for segmenting
+                df_data['along_track'] = (df_data["x"]**2 + df_data["y"]**2)**(1/2)
+
+                # print(f"Elevation min: {df_data['elev'].min()}")
+                # print(f"Elevation max: {df_data['elev'].max()}")
+                
+                # Remove irrelevant photons (deeper than 50m, higher than 10m)
                 if removeIrrelevant:
-                    df_data = df_data[(df_data["elev"] > minElev) & (df_data["elev"] < maxElev)]
+                    # df_data = df_data[(df_data["elev"] > minElev) & (df_data["elev"] < maxElev)]
+                    df_data = df_data[(df_data["elev"] > minElev) & (df_data["elev"] < 50)]
 
                 if removeLand:  # Remove photons for which the DEM is more than 50m above the geoid
                     df_data = df_data[(df_data["dem"] - df_data["geoid"] < 50)]
@@ -278,13 +285,13 @@ def convert(dataDir, utm=True, removeLand=True, removeIrrelevant=True, interval=
                     df['lon'] = df['lon_ph']
                     df = df.drop(['lat_ph', 'lon_ph'], axis=1)
                     df = df[['ph_index', 'x', 'y', 'lon', 'lat', 'elev', 'tide',
-                             'signal_conf_ph', 'class']]  # Change the order of the columns
+                             'signal_conf_ph', 'class', 'along_track']]  # Change the order of the columns
                 else:
                     df['lat'] = df['lat_ph']
                     df['lon'] = df['lon_ph']
                     df = df.drop(['lat_ph', 'lon_ph'], axis=1)
                     df = df[
-                        ['ph_index', 'lon', 'lat', 'elev', 'tide', 'signal_conf_ph', 'class']]  # Change the order of the columns
+                        ['ph_index', 'lon', 'lat', 'elev', 'tide', 'signal_conf_ph', 'class', 'along_track']]  # Change the order of the columns
 
                 # Do normalization so all values are between 0 and 1
                 # df = (df - df.min()) / (df.max() - df.min())
@@ -294,18 +301,65 @@ def convert(dataDir, utm=True, removeLand=True, removeIrrelevant=True, interval=
 
                 # Find water surface
                 df_segment_all = pd.DataFrame(columns=df.columns)
-                num = math.ceil((df['y'].max() - df['y'].min()) / interval)
-                y1 = df['y'].min()
+                
+                #Original method
+                # num = math.ceil((df['y'].max() - df['y'].min()) / interval)
+                # y1 = df['y'].min()
+
+                #Segmenting by ph_index
+                num_rows = df.index
+                num = math.ceil(num_rows.max() / interval)
+                y1 = 0
+
+                #Segmenting by along track distance
+                # num = math.ceil((df['along_track'].max() - df['along_track'].min()) / interval)
+                # y1 = df['along_track'].min()
+
+                # print(f"along track max: {df['along_track'].max()}")
+                # print(f"along track min: {df['along_track'].min()}")
+                # print(f"{gtx} Along-track distance: {df['along_track'].max() - df['along_track'].min()}")
+
+                #Log the along track distance of each beam
+                log_along_track_path = dataDir + "/along_track_distance.txt"
+                with open(log_along_track_path, "a+") as output_file:
+                    output_file.write(f"{gtx} Along-track distance: {df['along_track'].max() - df['along_track'].min()}\n")
+
+                # print(f"num: {num}")
+                # print(f"y1: {y1}")
+
                 for i in range(num):
                     y2 = y1 + interval
-                    df_segment = df[(df['y'] >= y1) & (df['y'] < y2)].copy()
+
+                    # Segmenting by along track distance
+                    # If this is the last segment, make sure to copy the last photon
+                    # if i == num-1: 
+                    #     df_segment = df[(df['along_track'] >= y1) & (df['along_track'] <= y2)].copy()
+                    # else:
+                    #     df_segment = df[(df['along_track'] >= y1) & (df['along_track'] < y2)].copy()
+
+
+                    #Segmenting by ph_index
+                    # If this is the last segment, make sure to copy the last photon
+                    if i == num-1: 
+                        df_segment = df.iloc[y1:].copy()
+                    else:
+                        df_segment = df.iloc[y1:y2].copy()
+
+                    #Drop the along-track distance column now that we're done with it, and before it goes to findSurface()
+                    df_segment = df_segment.drop(['along_track'], axis=1)
+
+                    #Original method
+                    # df_segment = df[(df['y'] >= y1) & (df['y'] < y2)].copy()
+
                     if not df_segment.empty:
                         df_segment = findSurface(df_segment, minElev, maxElev)
                         # If there is a weird distribution of points, skip this segment.
                         if df_segment.empty:
                             continue
-                    df_segment_all = pd.concat([df_segment_all, df_segment], ignore_index=True)
+
+                        df_segment_all = pd.concat([df_segment_all, df_segment], ignore_index=True)
                     y1 = y2
+
                 df = df_segment_all
 
                 # Write data to csv file
