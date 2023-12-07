@@ -2,6 +2,6 @@
 /shelf/
 /workspace.xml
 plot.py
-pointnet/
-Data/
-venv/
+/pointnet/
+/Data/
+/venv/
