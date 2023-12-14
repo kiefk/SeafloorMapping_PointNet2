@@ -201,15 +201,21 @@ def convert(dataDir, utm=True, removeLand=True, removeIrrelevant=True, interval=
                 df_ref['ref_dem'] = IS2_atl03_mds[gtx]['geophys_corr']['dem_h']
 
                 # Remove NAs
-                df_ref = df_ref[df_ref['ref_geoid'] < 90]
-                df_ref = df_ref[df_ref['ref_geoid'] > -105]
+                df_ref = df_ref[(df_ref['ref_geoid'] < 90) & (df_ref['ref_geoid'] > -105)]
+                # df_ref = df_ref[df_ref['ref_geoid'] < 90]
+                # df_ref = df_ref[df_ref['ref_geoid'] > -105]
 
-                # Remove data outside reference scope
-                df_data = df_data[df_data['lat_ph'] > min(df_ref['ref_lat'])]
-                df_data = df_data[df_data['lat_ph'] < max(df_ref['ref_lat'])]
+                # # Remove data outside reference scope
+                # df_data = df_data[df_data['lat_ph'] > min(df_ref['ref_lat'])]
+                # df_data = df_data[df_data['lat_ph'] < max(df_ref['ref_lat'])]
 
-                # Remove data with low confidence - 3 is medium confidence, 4 is high confidence
-                df_data = df_data[df_data['signal_conf_ph'] >= 3]
+                # # Remove data with low confidence - 3 is medium confidence, 4 is high confidence
+                # df_data = df_data[df_data['signal_conf_ph'] >= 3]
+
+                # Remove data outside reference scope and data with low confidence - 3 is medium confidence, 4 is high confidence
+                df_data = df_data[(df_data['lat_ph'] > min(df_ref['ref_lat']))
+                                  & (df_data['lat_ph'] < max(df_ref['ref_lat']))
+                                  & (df_data['signal_conf_ph'] >= 3)]
 
                 # Interpolate geoid heights to photon latitudes
                 x = df_ref['ref_lat'].to_numpy()
@@ -264,8 +270,8 @@ def convert(dataDir, utm=True, removeLand=True, removeIrrelevant=True, interval=
                 
                 # Remove irrelevant photons (deeper than 50m, higher than 10m)
                 if removeIrrelevant:
-                    # df_data = df_data[(df_data["elev"] > minElev) & (df_data["elev"] < maxElev)]
-                    df_data = df_data[(df_data["elev"] > minElev) & (df_data["elev"] < 50)]
+                    df_data = df_data[(df_data["elev"] > minElev) & (df_data["elev"] < maxElev)]
+                    
 
                 if removeLand:  # Remove photons for which the DEM is more than 50m above the geoid
                     df_data = df_data[(df_data["dem"] - df_data["geoid"] < 50)]
