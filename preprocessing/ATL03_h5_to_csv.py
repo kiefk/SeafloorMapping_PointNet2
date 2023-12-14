@@ -212,10 +212,13 @@ def convert(dataDir, utm=True, removeLand=True, removeIrrelevant=True, interval=
                 # # Remove data with low confidence - 3 is medium confidence, 4 is high confidence
                 # df_data = df_data[df_data['signal_conf_ph'] >= 3]
 
-                # Remove data outside reference scope and data with low confidence - 3 is medium confidence, 4 is high confidence
+                # Remove data outside reference scope min(ref_lat) < lat_ph < max(ref_lat)
+                # Remove data with low signal confidence - 3 is medium confidence, 4 is high confidence
+                # Remove data outside reasonable boundaries (lat_ph < 9000)
                 df_data = df_data[(df_data['lat_ph'] > min(df_ref['ref_lat']))
                                   & (df_data['lat_ph'] < max(df_ref['ref_lat']))
-                                  & (df_data['signal_conf_ph'] >= 3)]
+                                  & (df_data['signal_conf_ph'] >= 3)
+                                  & (df_data['lat_ph'] < 9000)]
 
                 # Interpolate geoid heights to photon latitudes
                 x = df_ref['ref_lat'].to_numpy()
@@ -246,7 +249,7 @@ def convert(dataDir, utm=True, removeLand=True, removeIrrelevant=True, interval=
 
                 # Remove data outside reasonable boundaries
                 df_data = df_data[df_data['elev'] > -12000]
-                df_data = df_data[df_data['lat_ph'] < 9000]
+                # df_data = df_data[df_data['lat_ph'] < 9000]
 
                 if utm:
                     # Find UTM zone to reproject to:
