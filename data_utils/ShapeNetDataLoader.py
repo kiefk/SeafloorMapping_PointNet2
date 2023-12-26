@@ -66,9 +66,11 @@ class PartNormalDataset(Dataset):
             cls = np.array([0]).astype(np.int32)
             data = np.loadtxt(fn).astype(np.float64)
             if not self.conf_channel:
-                point_set = data[:, [0, 1, 2]]  # use x,y,elev
+                # point_set = data[:, [0, 1, 2]]  # use x,y,elev, old
+                point_set = data[:, [3, 4, 2]]  # use lon,lat,elev
             else:
-                point_set = data[:, [0, 1, 2, 6]]  # use x,y,elev,signal_conf
+                # point_set = data[:, [0, 1, 2, 6]]  # use x,y,elev,signal_conf, old
+                point_set = data[:, [3, 4, 2, 6]]  # use lon,lat,elev,signal_conf
                 point_set[:, -1] = point_set[:, -1].astype(np.int32)
 
             seg = data[:, -1].astype(np.int32)
