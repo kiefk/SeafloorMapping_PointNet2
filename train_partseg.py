@@ -354,7 +354,8 @@ def main(args):
         free_gpu_cache()
 
     logger.info('Save model...')
-    savepath = str(checkpoints_dir) + '/model.pth'
+    # savepath = str(checkpoints_dir) + '/model.pth'
+    savepath = str(checkpoints_dir) + '/lat_lon_model.pth'
     log_string('Saving at %s' % savepath)
     state = {
         'epoch': epoch + 1,
