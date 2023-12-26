@@ -4,3 +4,7 @@
 plot.py
 /pointnet/
 /Data/
+/data_8192/
+!/Data/batch_predict_script.sh
+!/Data/batch_preprocessing_script.sh
+!/Data/batch_processing.sh
