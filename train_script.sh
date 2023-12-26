@@ -14,15 +14,21 @@ learning_rate=0.0001
 lr_decay=1
 step_size=1
 loss_weight=3.0
-data_root=data_8192_2
-ckpt=
+data_root="data_8192/data_8192"
+ckpt=""
 
 ################################################
 ## split training data
-python ${split_file} --data_dir ${data_root}
+# python ${split_file} --data_dir ${data_root}
 
 ## training
+# python ${train_file} --model ${model} --epoch ${epoch_num} --npoint ${npoint} \
+#        --batch_size ${batch_size} --learning_rate ${learning_rate}\
+#        --data_root ${data_root} --conf --loss_weight ${loss_weight}\
+#        --lr_decay ${lr_decay} --ckpt ${ckpt} --step_size ${step_size}
+
+#no checkpoint
 python ${train_file} --model ${model} --epoch ${epoch_num} --npoint ${npoint} \
        --batch_size ${batch_size} --learning_rate ${learning_rate}\
        --data_root ${data_root} --conf --loss_weight ${loss_weight}\
-       --lr_decay ${lr_decay} --ckpt ${ckpt} --step_size ${step_size}
+       --lr_decay ${lr_decay} --step_size ${step_size}
