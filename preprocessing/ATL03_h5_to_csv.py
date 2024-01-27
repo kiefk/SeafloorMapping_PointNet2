@@ -195,29 +195,17 @@ def convert(dataDir, utm=True, removeLand=True, removeIrrelevant=True, interval=
 
                 df_ref = pd.DataFrame()
                 df_ref['ref_lat'] = IS2_atl03_mds[gtx]['geolocation']['reference_photon_lat']
-                df_ref['ref_lon'] = IS2_atl03_mds[gtx]['geolocation']['reference_photon_lon']
+                # df_ref['ref_lon'] = IS2_atl03_mds[gtx]['geolocation']['reference_photon_lon']
                 df_ref['ref_geoid'] = IS2_atl03_mds[gtx]['geophys_corr']['geoid']
-                df_ref['ref_tide'] = IS2_atl03_mds[gtx]['geophys_corr']['tide_ocean']
+                # df_ref['ref_tide'] = IS2_atl03_mds[gtx]['geophys_corr']['tide_ocean']
                 df_ref['ref_dem'] = IS2_atl03_mds[gtx]['geophys_corr']['dem_h']
 
                 # Remove NAs
                 df_ref = df_ref[(df_ref['ref_geoid'] < 90) & (df_ref['ref_geoid'] > -105)]
-                # df_ref = df_ref[df_ref['ref_geoid'] < 90]
-                # df_ref = df_ref[df_ref['ref_geoid'] > -105]
 
-                # # Remove data outside reference scope
-                # df_data = df_data[df_data['lat_ph'] > min(df_ref['ref_lat'])]
-                # df_data = df_data[df_data['lat_ph'] < max(df_ref['ref_lat'])]
-
-                # # Remove data with low confidence - 3 is medium confidence, 4 is high confidence
-                # df_data = df_data[df_data['signal_conf_ph'] >= 3]
-
-                # Remove data outside reference scope min(ref_lat) < lat_ph < max(ref_lat)
                 # Remove data with low signal confidence - 3 is medium confidence, 4 is high confidence
                 # Remove data outside reasonable boundaries (lat_ph < 9000)
-                df_data = df_data[(df_data['lat_ph'] > min(df_ref['ref_lat']))
-                                  & (df_data['lat_ph'] < max(df_ref['ref_lat']))
-                                  & (df_data['signal_conf_ph'] >= 3)
+                df_data = df_data[(df_data['signal_conf_ph'] >= 3)
                                   & (df_data['lat_ph'] < 9000)]
 
                 # Interpolate geoid heights to photon latitudes
@@ -227,14 +215,6 @@ def convert(dataDir, utm=True, removeLand=True, removeIrrelevant=True, interval=
                 x_new = df_data['lat_ph']
                 y_new = f(x_new)
                 df_data['geoid'] = y_new
-
-                # Interpolate tide heights to photon latitudes
-                x = df_ref['ref_lat'].to_numpy()
-                y = df_ref['ref_tide'].to_numpy()
-                f = scipy.interpolate.interp1d(x, y)
-                x_new = df_data['lat_ph']
-                y_new = f(x_new)
-                df_data['tide'] = y_new
 
                 # Interpolate DEM heights to photon latitudes
                 x = df_ref['ref_lat'].to_numpy()
@@ -286,21 +266,20 @@ def convert(dataDir, utm=True, removeLand=True, removeIrrelevant=True, interval=
                 df['class'] = np.full((len(df)), 3)
 
                 # Set nodata to 0 for tides (slightly dangerous)
-                tides = np.array(df['tide'].values.tolist())
-                df['tide'] = np.where(tides > 1000, 0, tides).tolist()
+                # tides = np.array(df['tide'].values.tolist())
+                # df['tide'] = np.where(tides > 1000, 0, tides).tolist()
 
                 if utm:
                     df['lat'] = df['lat_ph']  # Keeping lat and lon here for reference
                     df['lon'] = df['lon_ph']
                     df = df.drop(['lat_ph', 'lon_ph'], axis=1)
-                    df = df[['ph_index', 'x', 'y', 'lon', 'lat', 'elev', 'tide',
+                    df = df[['ph_index', 'x', 'y', 'lon', 'lat', 'elev', 
                              'signal_conf_ph', 'class', 'along_track']]  # Change the order of the columns
                 else:
                     df['lat'] = df['lat_ph']
                     df['lon'] = df['lon_ph']
                     df = df.drop(['lat_ph', 'lon_ph'], axis=1)
-                    df = df[
-                        ['ph_index', 'lon', 'lat', 'elev', 'tide', 'signal_conf_ph', 'class', 'along_track']]  # Change the order of the columns
+                    df = df[['ph_index', 'lon', 'lat', 'elev', 'signal_conf_ph', 'class', 'along_track']]  # Change the order of the columns
 
                 # Do normalization so all values are between 0 and 1
                 # df = (df - df.min()) / (df.max() - df.min())
