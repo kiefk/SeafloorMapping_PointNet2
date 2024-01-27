@@ -205,7 +205,15 @@ def convert(dataDir, utm=True, removeLand=True, removeIrrelevant=True, interval=
 
                 # Remove data with low signal confidence - 3 is medium confidence, 4 is high confidence
                 # Remove data outside reasonable boundaries (lat_ph < 9000)
-                df_data = df_data[(df_data['signal_conf_ph'] >= 3)
+
+                #Use this version when geoid and dem are provided as input instead of interpolated. 
+                # df_data = df_data[(df_data['signal_conf_ph'] >= 3)
+                #                   & (df_data['lat_ph'] < 9000)]
+
+                #Use this when doing interpolation, can't interpolate outside of minimum and maximum ref_lat. 
+                df_data = df_data[(df_data['lat_ph'] > min(df_ref['ref_lat']))
+                                  & (df_data['lat_ph'] < max(df_ref['ref_lat']))
+                                  & (df_data['signal_conf_ph'] >= 3)
                                   & (df_data['lat_ph'] < 9000)]
 
                 # Interpolate geoid heights to photon latitudes
