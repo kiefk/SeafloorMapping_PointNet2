@@ -3,11 +3,9 @@
 
 # Imports
 import glob
-import shutil
 import pandas as pd
 from pyproj import Transformer
 import os
-import io
 import re
 import h5py
 import numpy as np
