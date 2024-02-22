@@ -37,6 +37,18 @@ def split(input_dir, mode='train'):
         file_list = []
         file_all = glob.glob(sub_dir + '/*')
         for file in file_all:
+            count = 0
+            with open(file, "r") as f:
+                for line in f:
+                    count += 1
+
+                    if count == 2:
+                        break
+
+            if count == 1:
+                print("Skipping, header only csv file")
+                continue
+
             # find original beam files based on file name and extension
             fname = os.path.splitext(os.path.basename(file))[0]
             ext = os.path.splitext(os.path.basename(file))[1]
@@ -49,7 +61,8 @@ def split(input_dir, mode='train'):
 
 def main(args):
     input_dir = args.input_dir
-    split(input_dir)
+    mode = args.mode
+    split(input_dir, mode)
 
 
 if __name__ == '__main__':
