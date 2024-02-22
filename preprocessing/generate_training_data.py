@@ -76,7 +76,7 @@ def split_by_npoints(file_list, output_dir, mode='train', npoints=8192, overwrit
         for i in range(len(subregion_index)):
             if mode == 'test':
                 df_subregion = df.iloc[subregion_index[i][0]:subregion_index[i][1],
-                    df.columns.get_indexer(["ph_index", "x", "y", "elev", "lon", "lat", "class", "signal_conf_ph"])]
+                    df.columns.get_indexer(["x", "y", "elev", "lon", "lat", "class", "signal_conf_ph"])]
                 output_filename = os.path.splitext(file_base)[0] + '_' + str(i + 1).zfill(2) + '.txt'
                 output_file_path = os.path.join(output_dir, output_filename)
                 # output file to pointnet++ input data format
