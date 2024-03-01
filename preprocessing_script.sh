@@ -3,9 +3,9 @@
 SOURCEDIR=./
 cd $SOURCEDIR
 
-data_dir=256160621
+data_dir="path/to/beam"
 mode='test'
 
 ################################################
-python preprocessing/ATL03_h5_to_csv.py --data_dir ${data_dir} --removeLand --removeIrrelevant --utm
+python preprocessing/preprocess_beam.py --data_dir ${data_dir} --removeLand --removeIrrelevant --utm
 python preprocessing/split_data_bulk.py --input_dir ${data_dir} --mode ${mode}
