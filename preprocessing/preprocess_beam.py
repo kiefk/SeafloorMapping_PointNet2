@@ -90,91 +90,46 @@ parser.add_argument('--interval', default=100000)
 
 
 def convert(dataDir, utm=True, removeLand=True, removeIrrelevant=True, interval=100000, maxElev=10, minElev=-50):
-    filenames = glob.glob(dataDir + "/*.h5")
+    """
+        Takes in a data directory that contains six beam csv files produced from a IceSat-2 granule.
+        Runs part of the preprocessing on the beam data to prepare it for classification predictions.
+        Write six csv files of preprocessed beam data, stored in a csv_data ouput directory.
+        Preprocessing is continued by running split_data_bulk.py with the beam data in the csv_data directory.
 
+        dataDir: String - directory path to the original beam data
+        utm: Bool - Always true, remove from command line and remove non-true utm portions of the algorithm that are never accessed
+        removeLand - Always true, remove from command line and remove non-true removeLand portions of the algorithm
+        removeIrrelevant - Always true, remove from command line and remove non-true portions of the algorithm
+        interval: Int - always 100,000. Remove from command line, make a variable at top of function or close to where it's called near findSurface
+        maxElev: Int - always 10. Remove from command line, make a variable.
+        minElev: Int - always -50. Remove from command line, make a variable. 
+
+        TODO: Use CoastNet surface classification instead of findSurface function
+        TODO: Are interval, maxElev, minElev irrelevant because of CoastNet seasurface classification?
+        TODO: Is UTM irrelevant due to easting and northing being provided in original beam data. 
+        TODO: Adjust removeLand to use ndwi water vs land score
+    """
+    #Get all files in this directory that end in .csv
+    #   This will be the six beam files for the granule.  
+    beams = glob.glob(dataDir + "/*.csv")
+
+    #Create a directory path for "csv_data" to store the output files of preprocess_beam
     output_dir = os.path.join(dataDir, 'csv_data')
+    
+    #If the csv_data folder doesn't exist, create it. 
     if not os.path.exists(output_dir):
         os.mkdir(output_dir)
 
-    for filename in filenames:
+    #Loop through the six beams
+    for filename in beams:
 
-        # print(filename)
-        print('Start converting H5 to CSV...')
+        print(f'Preprocessing {filename}...')
 
-        with h5py.File(filename, mode='r') as fileID:
-            # List all groups
-            # print("Keys: %s" % fileID.keys())
+        #Read in the csv file with pandas
+        df = pd.read_csv(file)
 
-            # -- allocate python dictionaries for ICESat-2 ATL03 variables and attributes
-            IS2_atl03_mds = {}
-            IS2_atl03_attrs = {}
-
-            # -- read each input beam within the file
-            IS2_atl03_beams = []
-            for gtx in [k for k in fileID.keys() if bool(re.match(r'gt\d[lr]', k))]:
-                try:
-                    fileID[gtx]['geolocation']['reference_photon_lat']
-                    fileID[gtx]['heights']['delta_time']
-                except KeyError:
-                    pass
-                else:
-                    IS2_atl03_beams.append(gtx)
-
-                # -- for each included beam
-            for gtx in IS2_atl03_beams:
-                # -- get each HDF5 variable
-                IS2_atl03_mds[gtx] = {}
-                IS2_atl03_mds[gtx]['heights'] = {}
-                IS2_atl03_mds[gtx]['geolocation'] = {}
-                # IS2_atl03_mds[gtx]['bckgrd_atlas'] = {}
-                IS2_atl03_mds[gtx]['geophys_corr'] = {}
-                # -- ICESat-2 Measurement Group
-                for key, val in fileID[gtx]['heights'].items():
-                    IS2_atl03_mds[gtx]['heights'][key] = val[:]
-                # -- ICESat-2 Geolocation Group
-                for key, val in fileID[gtx]['geolocation'].items():
-                    IS2_atl03_mds[gtx]['geolocation'][key] = val[:]
-                # -- ICESat-2 Background Photon Rate Group
-                # for key, val in fileID[gtx]['bckgrd_atlas'].items():
-                #     IS2_atl03_mds[gtx]['bckgrd_atlas'][key] = val[:]
-                # -- ICESat-2 Geophysical Corrections Group: Values for tides (ocean,
-                # -- solid earth, pole, load, and equilibrium), inverted barometer (IB)
-                # -- effects, and range corrections for tropospheric delays
-                for key, val in fileID[gtx]['geophys_corr'].items():
-                    IS2_atl03_mds[gtx]['geophys_corr'][key] = val[:]
-
-                # -- Getting attributes of IS2_atl03_mds beam variables
-                IS2_atl03_attrs[gtx] = {}
-                IS2_atl03_attrs[gtx]['heights'] = {}
-                IS2_atl03_attrs[gtx]['geolocation'] = {}
-                # IS2_atl03_attrs[gtx]['bckgrd_atlas'] = {}
-                IS2_atl03_attrs[gtx]['geophys_corr'] = {}
-                # -- Global Group Attributes
-                for att_name, att_val in fileID[gtx].attrs.items():
-                    IS2_atl03_attrs[gtx][att_name] = att_val
-                # -- ICESat-2 Measurement Group
-                for key, val in fileID[gtx]['heights'].items():
-                    IS2_atl03_attrs[gtx]['heights'][key] = {}
-                    for att_name, att_val in val.attrs.items():
-                        IS2_atl03_attrs[gtx]['heights'][key][att_name] = att_val
-                # -- ICESat-2 Geolocation Group
-                for key, val in fileID[gtx]['geolocation'].items():
-                    IS2_atl03_attrs[gtx]['geolocation'][key] = {}
-                    for att_name, att_val in val.attrs.items():
-                        IS2_atl03_attrs[gtx]['geolocation'][key][att_name] = att_val
-                # -- ICESat-2 Background Photon Rate Group
-                # for key,val in fileID[gtx]['bckgrd_atlas'].items():
-                #     IS2_atl03_attrs[gtx]['bckgrd_atlas'][key] = {}
-                #     for att_name,att_val in val.attrs.items():
-                #         IS2_atl03_attrs[gtx]['bckgrd_atlas'][key][att_name]=att_val
-                # -- ICESat-2 Geophysical Corrections Group
-                for key, val in fileID[gtx]['geophys_corr'].items():
-                    IS2_atl03_attrs[gtx]['geophys_corr'][key] = {}
-                    for att_name, att_val in val.attrs.items():
-                        IS2_atl03_attrs[gtx]['geophys_corr'][key][att_name] = att_val
-
-            # Ok, now write to csv files
-            for gtx in IS2_atl03_beams:
+        # Ok, now write to csv files
+        for gtx in IS2_atl03_beams:
 
                 # Put data in pandas df
                 df_data = pd.DataFrame()
@@ -358,8 +313,7 @@ def convert(dataDir, utm=True, removeLand=True, removeIrrelevant=True, interval=
 
                 # Write data to csv file
                 if utm:
-                    outFilename = output_dir + "/" + os.path.basename(filename)[
-                                              :-3] + "_" + gtx + "_raw_" + zone + ".csv"  # Reinstate if
+                    outFilename = output_dir + "/" + os.path.basename(filename)[:-3] + "_" + gtx + "_raw_" + zone + ".csv"  # Reinstate if
                 else:
                     outFilename = output_dir + "/" + os.path.basename(filename)[:-3] + "_" + gtx + "_raw" + ".csv"
                 df.to_csv(outFilename, index=False)
