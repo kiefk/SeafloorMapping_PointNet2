@@ -187,7 +187,7 @@ def convert(dataDir, utm=True, removeLand=True, removeIrrelevant=True, interval=
         # Rename columns to match expected names in split_data_bulk.py and generate_training_data.py
         # TODO: Change downstream names to match original column names instead of renaming. Check split_data_bulk.py and generate_training_data.py and prediction files.
         # TODO: Potentailly drop the lat and lon columns? I don't think they're used later. Check split_data_bulk.py and generate_training_data.py and prediction files.
-        beam_df.rename(columns={'index_ph': 'ph_index', 'x_ph': 'x', 'y_ph': 'y', 'lon_ph': 'lon', 'lat_ph': 'lat', 'max_signal_conf': 'signal_conf_ph'})
+        beam_df.rename(columns={'index_ph': 'ph_index', 'geoid_corrected_h': 'elev', 'x_ph': 'x', 'y_ph': 'y', 'lon_ph': 'lon', 'lat_ph': 'lat', 'max_signal_conf': 'signal_conf_ph'})
         # Change the order of the columns
         beam_df = beam_df[['ph_index', 'x', 'y', 'lon', 'lat', 'elev', 'signal_conf_ph', 'class']]  
 
