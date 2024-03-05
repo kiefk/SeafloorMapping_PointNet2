@@ -51,7 +51,7 @@ def split(input_dir, mode='train'):
 
             # find original beam files based on file name and extension
             fname = os.path.splitext(os.path.basename(file))[0]
-            ext = os.path.splitext(os.path.basename(file))[1]
+
             if fname.endswith('N') or fname.endswith('S'):
                 file_list.append(file)
             generate_training_data.split_by_npoints(file_list, output_dir, mode)
