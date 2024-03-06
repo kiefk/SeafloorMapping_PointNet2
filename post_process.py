@@ -50,10 +50,19 @@ def main(args):
                 sub_file_list.extend(df_sub_file.to_numpy().tolist())
         df = pd.DataFrame(sub_file_list, columns=columns)
         # convert label column to integer
+        # If pred = 1 the photon is bathymetry, if pred = 0 the photon is other. 
         if 'pred' in df.columns:
             df['pred'] = df['pred'].astype(int)
         if 'label' in df.columns:
             df['label'] = df['label'].astype(int)
+
+        #Change bathymetry classification value from 1 to 40 to match ASPRS classifications.
+        df.loc[df['pred'] == 1, 'pred'] = 40
+        #Change other classification value from 0 to 1 to match ASPRS classifications.
+        df.loc[df['pred'] == 0, 'pred'] = 1
+
+        
+
         output_file = os.path.join(output_dir, file + '.csv')
         df.to_csv(output_file, sep=',', index=False, header=True)
 
