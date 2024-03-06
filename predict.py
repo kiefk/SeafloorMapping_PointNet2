@@ -20,6 +20,7 @@ ROOT_DIR = BASE_DIR
 sys.path.append(os.path.join(ROOT_DIR, 'models'))
 
 seg_classes = {'Seafloor': [0, 1]}
+#0 = other, 1 = seafloor/bathymetry
 
 seg_label_to_cat = {}
 for cat in seg_classes.keys():
