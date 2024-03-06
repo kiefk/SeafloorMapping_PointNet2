@@ -254,7 +254,7 @@ def convert(dataDir, utm=True, removeLand=True, removeIrrelevant=True, interval=
             zone = granule_vars["utm_zone"] + "S"
 
         # Write data to csv file
-        output_filename = output_dir + "/" + os.path.splitext(os.path.basename(filename))[0] + "_raw_" + zone + ".csv" 
+        output_filename = output_dir + "/" + os.path.splitext(os.path.basename(filename))[0] + zone + ".csv" 
         
         beam_df.to_csv(output_filename, index=False)
 
