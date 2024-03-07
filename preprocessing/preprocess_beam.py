@@ -187,9 +187,9 @@ def convert(dataDir, utm=True, removeLand=True, removeIrrelevant=True, interval=
         # Rename columns to match expected names in split_data_bulk.py and generate_training_data.py
         # TODO: Change downstream names to match original column names instead of renaming. Check split_data_bulk.py and generate_training_data.py and prediction files.
         # TODO: Potentailly drop the lat and lon columns? I don't think they're used later. Check split_data_bulk.py and generate_training_data.py and prediction files.
-        beam_df.rename(columns={'index_ph': 'ph_index', 'x_ph': 'x', 'y_ph': 'y', 'lon_ph': 'lon', 'lat_ph': 'lat', 'geoid_corrected_h': 'elev',  'max_signal_conf': 'signal_conf_ph'})
+        beam_df.rename(columns={'x_ph': 'x', 'y_ph': 'y', 'lon_ph': 'lon', 'lat_ph': 'lat', 'geoid_corrected_h': 'elev',  'max_signal_conf': 'signal_conf_ph'})
         # Change the order of the columns
-        beam_df = beam_df[['ph_index', 'x', 'y', 'lon', 'lat', 'elev', 'signal_conf_ph', 'class']]  
+        beam_df = beam_df[['index_ph', 'x', 'y', 'lon', 'lat', 'elev', 'signal_conf_ph', 'class']]  
 
         # Do normalization so all values are between 0 and 1
         # df = (df - df.min()) / (df.max() - df.min())
@@ -210,7 +210,7 @@ def convert(dataDir, utm=True, removeLand=True, removeIrrelevant=True, interval=
         # # num = math.ceil((df['y'].max() - df['y'].min()) / interval)
         # # y1 = df['y'].min()
 
-        # #Segmenting by ph_index
+        # #Segmenting by index_ph
         # num_rows = df.index
         # num = math.ceil(num_rows.max() / interval)
         # y1 = 0
@@ -222,7 +222,7 @@ def convert(dataDir, utm=True, removeLand=True, removeIrrelevant=True, interval=
         # for i in range(num):
         #     y2 = y1 + interval
 
-        #     #Segmenting by ph_index
+        #     #Segmenting by index_ph
         #     # If this is the last segment, make sure to copy the last photon
         #     if i == num-1: 
         #         df_segment = df.iloc[y1:].copy()

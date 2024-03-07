@@ -235,8 +235,8 @@ def main(args):
                     # create a new point cloud array
                     output_points = np.zeros((cur_points.shape[0], 9)).astype(np.float64)
                     data = np.loadtxt(fn[i]).astype(np.float64)
-                    ph_index = data[:, [0]]
-                    output_points[:, 0:1] = ph_index
+                    index_ph = data[:, [0]]
+                    output_points[:, 0:1] = index_ph
                     output_points[:, 1:4] = cur_points[:, 0:3]
                     # recover the point coordinates
                     cur_pc_min = pc_min[i, :]
@@ -254,7 +254,7 @@ def main(args):
                     # output file
                     output_file = os.path.splitext(os.path.basename(fn[i]))[0] + '.csv'
                     output_path = os.path.join(output_dir, output_file)
-                    header = 'ph_index,x,y,elev,lon,lat,class,prob,pred'
+                    header = 'index_ph,x,y,elev,lon,lat,class,prob,pred'
                     np.savetxt(output_path, output_points, delimiter=',', header=header, fmt='%.4f')
 
     # Combine all the sub-files to the original beam files

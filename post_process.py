@@ -77,8 +77,8 @@ def main(args):
         # Use pandas to read in a dataframe for the sea surface csv with the same beam name
         sea_surface_df = pd.read_csv(sea_surface_filename)
 
-        # Rename df columns to give the index and classification columns the same name as the sea surface dataframe
-        df.rename(columns={'ph_index' : 'index_ph', 'pred': 'class_ph'})
+        # Rename df column classification column to the expected output name
+        df.rename(columns={'pred': 'class_ph'})
 
         # Compare the sea surface dataframe to the current beam dataframe "df".
         # Collects all rows from sea surface that are not in df
