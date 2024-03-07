@@ -136,9 +136,9 @@ def convert(dataDir, utm=True, removeLand=True, removeIrrelevant=True, interval=
         # Remove sea surface photons, this section replaces the  findSurface()
 
         # Get the sea surface filename for this beam
-        # IceSAT-2 input filename pattern = gtxx_granule_name_input.csv
-        # Sea Surface filename pattern = gtxx_granule_name_sea_surface.csv
-        sea_surface_filename = filename.replace('input', 'sea_surface')
+        # IceSAT-2 input filename pattern = granule_name_gtxx.csv
+        # Sea Surface filename pattern = granule_name_gtxx_sea_surface.csv
+        sea_surface_filename = os.path.splitext(os.path.basename(filename))[0] + "_sea_surface.csv"
         # Use pandas to read in a dataframe for the sea surface csv with the same beam name
         sea_surface_df = pd.read_csv(sea_surface_filename)
 
