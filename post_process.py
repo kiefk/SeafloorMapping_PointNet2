@@ -79,15 +79,12 @@ def main(args):
         # Use pandas to read in a dataframe for the sea surface csv with the same beam name
         sea_surface_df = pd.read_csv(sea_surface_filename)
 
-        # Give the index columns the same name
-        df.rename(columns={'ph_index' : 'index_ph'})
+        # Give the index and classification columns the same name
+        df.rename(columns={'ph_index' : 'index_ph', 'pred': 'class_ph'})
 
         # Compare the sea surface dataframe to the current beam dataframe "df".
         # Collects all rows from sea surface that are not in df
         df_unique = sea_surface_df[~sea_surface_df.index_ph.isin(df.index_ph)]
-
-        # Give the classification column the same name.
-        df_unique.rename(columns={'class_ph' : 'pred'})
 
         # Add the unique sea surface photons back to the beam dataframe. 
         df_all = pd.concat([df, df_unique])
@@ -95,7 +92,7 @@ def main(args):
         df_all.sort_values(by=['index_ph'])
 
         output_file = os.path.join(output_dir, file + '.csv')
-        df_all.to_csv(output_file, sep=',', index=False, header=True, columns=['pred'])
+        df_all.to_csv(output_file, sep=',', index=False, header=True, columns=['class_ph'])
 
 
 if __name__ == '__main__':
