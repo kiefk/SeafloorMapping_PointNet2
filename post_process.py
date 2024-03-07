@@ -67,19 +67,17 @@ def main(args):
         df.loc[df['pred'] == 0, 'pred'] = 1
 
         # Get the sea surface beam file to add back in photons that were removed during preprocessing.
-        # IceSAT-2 input filename pattern = gtxx_granule_name_input.csv
-        # Sea Surface filename pattern = gtxx_granule_name_sea_surface.csv
-        # The current filename hould be the input filename plus utm zone: ex "gtxx_granule_name_input_utmzone"
-        # Remove utmzone and replace "input" with "sea_surface"
+        # IceSAT-2 input filename pattern = granule_name_gtxx.csv
+        # Sea Surface filename pattern = granule_name_gtxx_sea_surface.csv
+        # The current filename should be the input filename plus utm zone: ex "granule_name_gtxx_utmzone"
+        # Remove utmzone and add "sea_surface"
         beam_file = file.rsplit('_', 1)[0]
-        # print(beam_file)
-        # print(os.getcwd()) #We are in the top level directory
-        sea_surface_filename = beam_file.replace('input', 'sea_surface')
+        sea_surface_filename = beam_file + "_sea_surface"
 
         # Use pandas to read in a dataframe for the sea surface csv with the same beam name
         sea_surface_df = pd.read_csv(sea_surface_filename)
 
-        # Give the index and classification columns the same name
+        # Rename df columns to give the index and classification columns the same name as the sea surface dataframe
         df.rename(columns={'ph_index' : 'index_ph', 'pred': 'class_ph'})
 
         # Compare the sea surface dataframe to the current beam dataframe "df".
@@ -91,7 +89,12 @@ def main(args):
         # Sort by photon index.
         df_all.sort_values(by=['index_ph'])
 
-        output_file = os.path.join(output_dir, file + '.csv')
+        # Add _pointnet tag to beam_file name to create the output filename
+        # Pointnet filename pattern = granule_name_gtxx_pointnet.csv
+        output_filename = beam_file + "_pointnet"
+        output_file = os.path.join(output_dir, output_filename + '.csv')
+
+        #only write classifications to output file
         df_all.to_csv(output_file, sep=',', index=False, header=True, columns=['class_ph'])
 
 
