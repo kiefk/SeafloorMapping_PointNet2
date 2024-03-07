@@ -72,7 +72,7 @@ def main(args):
         # The current filename should be the input filename plus utm zone: ex "granule_name_gtxx_utmzone"
         # Remove utmzone and add "sea_surface"
         beam_file = file.rsplit('_', 1)[0]
-        sea_surface_filename = beam_file + "_sea_surface"
+        sea_surface_filename = beam_file + "_sea_surface.csv"
 
         # Use pandas to read in a dataframe for the sea surface csv with the same beam name
         sea_surface_df = pd.read_csv(sea_surface_filename)
@@ -91,11 +91,14 @@ def main(args):
 
         # Add _pointnet tag to beam_file name to create the output filename
         # Pointnet filename pattern = granule_name_gtxx_pointnet.csv
-        output_filename = beam_file + "_pointnet"
-        output_file = os.path.join(output_dir, output_filename + '.csv')
+        output_filename = beam_file + "_pointnet.csv"
+
+        # This writes the output file to the ouput_0.5_merge directory instead of the top level data directory
+        # Comment out line 94, and uncomment line 98 to use. 
+        # output_filename = os.path.join(output_dir, beam_file + "_pointnet.csv" + '.csv')
 
         #only write classifications to output file
-        df_all.to_csv(output_file, sep=',', index=False, header=True, columns=['class_ph'])
+        df_all.to_csv(output_filename, sep=',', index=False, header=True, columns=['class_ph'])
 
 
 if __name__ == '__main__':
