@@ -231,29 +231,30 @@ def main(args):
                     cur_mask = point_set_normalized_mask[i, :]
                     cur_points = cur_points[cur_mask, :]
                     # create a new point cloud array
-                    output_points = np.zeros((cur_points.shape[0], 9)).astype(np.float64)
+                    output_points = np.zeros((cur_points.shape[0], 2)).astype(np.float64)
                     data = np.loadtxt(fn[i]).astype(np.float64)
                     index_ph = data[:, [0]]
                     output_points[:, 0:1] = index_ph
-                    output_points[:, 1:4] = cur_points[:, 0:3]
-                    # recover the point coordinates
-                    cur_pc_min = pc_min[i, :]
-                    cur_pc_max = pc_max[i, :]
-                    # recover other info
-                    other_data = data[:, [4,5,6]]
-                    # output points
-                    output_points[:, 1:4] = pc_denormalize(output_points[:, 1:4], cur_pc_min, cur_pc_max)
-                    # output other info
-                    output_points[:, 4:7] = other_data
-                    # output class and probability
-                    output_points[:, 7] = cur_pred_prob_mask[i]
-                    output_points[:, 8] = cur_pred_val_mask[i]
+                    # output_points[:, 1:4] = cur_points[:, 0:3]
+                    # # recover the point coordinates
+                    # cur_pc_min = pc_min[i, :]
+                    # cur_pc_max = pc_max[i, :]
+                    # # recover other info
+                    # other_data = data[:, [4,5,6]]
+                    # # output points
+                    # output_points[:, 1:4] = pc_denormalize(output_points[:, 1:4], cur_pc_min, cur_pc_max)
+                    # # output other info
+                    # output_points[:, 4:7] = other_data
+                    # # output class and probability
+                    # output_points[:, 7] = cur_pred_prob_mask[i]
+                    output_points[:, 1] = cur_pred_val_mask[i]
 
                     # output file
                     output_file = os.path.splitext(os.path.basename(fn[i]))[0] + '.csv'
                     output_path = os.path.join(output_dir, output_file)
-                    header = 'index_ph,x,y,elev,lon,lat,class,prob,pred'
-                    np.savetxt(output_path, output_points, delimiter=',', header=header, fmt='%.4f')
+                    # header = 'index_ph,x,y,elev,lon,lat,class,prob,pred'
+                    header = 'index_ph,class_ph'
+                    np.savetxt(output_path, output_points, delimiter=',', header=header, fmt='%.4f', comments='')
 
     # Combine all the sub-files to the original beam files
     #Single Process
