@@ -26,10 +26,10 @@ def parse_args():
 def main(args):
     log_dir = args.log_dir
     input_dir = os.path.join(log_dir, args.data_dir)
-    output_dir = os.path.join(log_dir, args.output_dir)
+    # output_dir = os.path.join(log_dir, args.output_dir)
 
-    if not os.path.exists(output_dir):
-        os.mkdir(output_dir)
+    # if not os.path.exists(output_dir):
+    #     os.mkdir(output_dir)
 
     file_list = []
     pattern = r'^(.*[NS])'
@@ -54,17 +54,14 @@ def main(args):
         #Store this beams data in a single dataframe
         df = pd.DataFrame(sub_file_list, columns=columns)
         
-        # convert label column to integer
-        # If pred = 1 the photon is bathymetry, if pred = 0 the photon is other. 
-        if 'pred' in df.columns:
-            df['pred'] = df['pred'].astype(int)
-        if 'label' in df.columns:
-            df['label'] = df['label'].astype(int)
+        # convert class column to integer
+        # If class_ph = 1 the photon is bathymetry, if class_ph = 0 the photon is other. 
+        df['class_ph'] = df['class_ph'].astype(int)
 
         #Change bathymetry classification value from 1 to 40 to match ASPRS classifications.
-        df.loc[df['pred'] == 1, 'pred'] = 40
+        df.loc[df['class_ph'] == 1, 'class_ph'] = 40
         #Change other classification value from 0 to 1 to match ASPRS classifications.
-        df.loc[df['pred'] == 0, 'pred'] = 1
+        df.loc[df['class_ph'] == 0, 'class_ph'] = 1
 
         # Get the sea surface beam file to add back in photons that were removed during preprocessing.
         # IceSAT-2 input filename pattern = granule_name_gtxx.csv
@@ -75,10 +72,7 @@ def main(args):
         sea_surface_filename = beam_file + "_sea_surface.csv"
 
         # Use pandas to read in a dataframe for the sea surface csv with the same beam name
-        sea_surface_df = pd.read_csv(sea_surface_filename)
-
-        # Rename df column classification column to the expected output name
-        df.rename(columns={'pred': 'class_ph'})
+        sea_surface_df = pd.read_csv(os.path.join(log_dir, sea_surface_filename))
 
         # Compare the sea surface dataframe to the current beam dataframe "df".
         # Collects all rows from sea surface that are not in df
@@ -87,18 +81,21 @@ def main(args):
         # Add the unique sea surface photons back to the beam dataframe. 
         df_all = pd.concat([df, df_unique])
         # Sort by photon index.
-        df_all.sort_values(by=['index_ph'])
+        df_all = df_all.sort_values(by=['index_ph'])
 
         # Add _pointnet tag to beam_file name to create the output filename
         # Pointnet filename pattern = granule_name_gtxx_pointnet.csv
         output_filename = beam_file + "_pointnet.csv"
+        output_filepath = os.path.join(log_dir, output_filename)
 
         # This writes the output file to the ouput_0.5_merge directory instead of the top level data directory
-        # Comment out line 94, and uncomment line 98 to use. 
-        # output_filename = os.path.join(output_dir, beam_file + "_pointnet.csv" + '.csv')
+        # Comment out line output_filepath line above, and uncomment the line below to use. 
+        # output_filepath = os.path.join(output_dir, output_filename)
 
         #only write classifications to output file
-        df_all.to_csv(output_filename, sep=',', index=False, header=True, columns=['class_ph'])
+        df_all.to_csv(output_filepath, sep=',', index=False, header=True, columns=['class_ph'])
+
+    print("Finished writing data!")
 
 
 if __name__ == '__main__':
