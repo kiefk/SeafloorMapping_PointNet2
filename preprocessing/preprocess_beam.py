@@ -107,7 +107,8 @@ def convert(dataDir, utm=True, removeLand=True, removeIrrelevant=True, interval=
     # Get all files in this directory that end in _input.csv
     #   This will be the six beam files for the granule.
     #   IceSAT-2 input filename pattern = gtxx_granule_name_input.csv 
-    beams = glob.glob(dataDir + "/*_input.csv")
+    beams = set(glob.glob(dataDir + "/*.csv")) - set(glob.glob(dataDir + "/*sea_surface.csv"))
+    # print(beams)
 
     # Create a directory path for "csv_data" to store the output files of preprocess_beam
     output_dir = os.path.join(dataDir, 'csv_data')
@@ -119,8 +120,9 @@ def convert(dataDir, utm=True, removeLand=True, removeIrrelevant=True, interval=
     #Get the JSON file that holds the per granule variables. 
     json_name = glob.glob(dataDir + "/*.json")
 
-    #Create a dictionary of the per granule variables from the JSON file
-    granule_vars = json.load(json_name[0])
+    with open(json_name[0], 'r') as file:
+        #Create a dictionary of the per granule variables from the JSON file
+        granule_vars = json.load(file)
 
     #Loop through the six beams
     for filename in beams:
@@ -131,7 +133,7 @@ def convert(dataDir, utm=True, removeLand=True, removeIrrelevant=True, interval=
         beam_df = pd.read_csv(filename)
 
         # Add a class column
-        beam_df['class'] = np.full((len(df)), 3)
+        beam_df['class'] = np.full((len(beam_df)), 3)
 
         # Remove sea surface photons, this section replaces the  findSurface()
 
@@ -140,7 +142,7 @@ def convert(dataDir, utm=True, removeLand=True, removeIrrelevant=True, interval=
         # Sea Surface filename pattern = granule_name_gtxx_sea_surface.csv
         sea_surface_filename = os.path.splitext(os.path.basename(filename))[0] + "_sea_surface.csv"
         # Use pandas to read in a dataframe for the sea surface csv with the same beam name
-        sea_surface_df = pd.read_csv(sea_surface_filename)
+        sea_surface_df = pd.read_csv(os.path.join(dataDir, sea_surface_filename))
 
         # Assuming beam_df and sea_surface_df have the same number of rows/photons (they should)
         # If sea_surface_df.class_ph == 41 (sea surface), then set the class for beam_df at that same photon index to 5 (sea surface for PointNet)
@@ -180,14 +182,12 @@ def convert(dataDir, utm=True, removeLand=True, removeIrrelevant=True, interval=
         #     output_file.write(f"{filename} Along-track distance: {beam_df['x_atc'].max() - beam_df['x_atc'].min()}\n")
 
         # Drop unused columns
-        beam_df = beam_df.drop(['x_atc', 'y_atc', 'sigma_along', 'sigma_across', 'sigma_h', 'delta_time', 'yapc', 'quality_ph', 'ndwi'], axis=1)
-
-
+        beam_df.drop(['x_atc', 'y_atc', 'sigma_along', 'sigma_across', 'sigma_h', 'delta_time', 'yapc', 'quality_ph', 'ndwi'], axis=1, inplace=True)
 
         # Rename columns to match expected names in split_data_bulk.py and generate_training_data.py
         # TODO: Change downstream names to match original column names instead of renaming. Check split_data_bulk.py and generate_training_data.py and prediction files.
         # TODO: Potentailly drop the lat and lon columns? I don't think they're used later. Check split_data_bulk.py and generate_training_data.py and prediction files.
-        beam_df.rename(columns={'x_ph': 'x', 'y_ph': 'y', 'lon_ph': 'lon', 'lat_ph': 'lat', 'geoid_corrected_h': 'elev',  'max_signal_conf': 'signal_conf_ph'})
+        beam_df.rename(columns={'x_ph': 'x', 'y_ph': 'y', 'lon_ph': 'lon', 'lat_ph': 'lat', 'geoid_corrected_h': 'elev',  'max_signal_conf': 'signal_conf_ph'}, inplace=True)
         # Change the order of the columns
         beam_df = beam_df[['index_ph', 'x', 'y', 'lon', 'lat', 'elev', 'signal_conf_ph', 'class']]  
 
