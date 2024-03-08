@@ -5,7 +5,7 @@ import subprocess
 def parse_args():
     '''PARAMETERS'''
     parser = argparse.ArgumentParser()
-    parser.add_argument('--data_dir', type=str, help='input data directory')
+    parser.add_argument('data_dir', type=str, help='input data directory')
     return parser.parse_args()
 
 if __name__ == '__main__':
