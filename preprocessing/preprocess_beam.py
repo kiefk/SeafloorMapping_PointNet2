@@ -182,12 +182,12 @@ def convert(dataDir, utm=True, removeLand=True, removeIrrelevant=True, interval=
         #     output_file.write(f"{filename} Along-track distance: {beam_df['x_atc'].max() - beam_df['x_atc'].min()}\n")
 
         # Drop unused columns
-        beam_df.drop(['x_atc', 'y_atc', 'sigma_along', 'sigma_across', 'sigma_h', 'delta_time', 'yapc', 'quality_ph', 'ndwi'], axis=1, inplace=True)
+        beam_df = beam_df.drop(['x_atc', 'y_atc', 'sigma_along', 'sigma_across', 'sigma_h', 'delta_time', 'yapc', 'quality_ph', 'ndwi'], axis=1)
 
         # Rename columns to match expected names in split_data_bulk.py and generate_training_data.py
         # TODO: Change downstream names to match original column names instead of renaming. Check split_data_bulk.py and generate_training_data.py and prediction files.
         # TODO: Potentailly drop the lat and lon columns? I don't think they're used later. Check split_data_bulk.py and generate_training_data.py and prediction files.
-        beam_df.rename(columns={'x_ph': 'x', 'y_ph': 'y', 'lon_ph': 'lon', 'lat_ph': 'lat', 'geoid_corrected_h': 'elev',  'max_signal_conf': 'signal_conf_ph'}, inplace=True)
+        beam_df = beam_df.rename(columns={'x_ph': 'x', 'y_ph': 'y', 'lon_ph': 'lon', 'lat_ph': 'lat', 'geoid_corrected_h': 'elev',  'max_signal_conf': 'signal_conf_ph'})
         # Change the order of the columns
         beam_df = beam_df[['index_ph', 'x', 'y', 'lon', 'lat', 'elev', 'signal_conf_ph', 'class']]  
 
