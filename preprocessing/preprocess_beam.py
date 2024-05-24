@@ -252,10 +252,10 @@ def convert(dataDir, utm=True, removeLand=True, removeIrrelevant=True, interval=
     #   functionality of split_data_bulk.py into preprocess_beam.py.  
     if spot_df["lat"].mean() > 0:
         # zone = granule_vars["utm_zone"] + "N"
-        zone = "utm_zone_N"
+        zone = "N"
     else:
         # zone = granule_vars["utm_zone"] + "S"
-        zone = "utm_zone_S"
+        zone = "S"
 
     # Write data to csv file
     output_filename = output_dir + "/" + os.path.splitext(os.path.basename(spot))[0] + "_" + zone + ".csv" 
