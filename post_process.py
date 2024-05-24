@@ -64,19 +64,24 @@ def main(args):
         df.loc[df['class_ph'] == 0, 'class_ph'] = 1
 
         # Get the sea surface beam file to add back in photons that were removed during preprocessing.
-        # IceSAT-2 input filename pattern = granule_name_gtxx.csv
-        # Sea Surface filename pattern = granule_name_gtxx_sea_surface.csv
-        # The current filename should be the input filename plus utm zone: ex "granule_name_gtxx_utmzone"
-        # Remove utmzone and add "sea_surface"
+        # IceSAT-2 input filename pattern example = bathy_spot_3.csv
+        # Sea Surface filename pattern example = seasurface_spot_3.csv
+        # The current filename should be the input filename plus utm zone: ex "bathy_spot_3_N"
+        # Remove bathy and utmzone from filename. Add "sea_surface"
         beam_file = file.rsplit('_', 1)[0]
-        sea_surface_filename = beam_file + "_sea_surface.csv"
+        base_beam_file = beam_file.split('_', 1)[1]
+        sea_surface_filename = "seasurface_" + base_beam_file + ".csv"
 
         # Use pandas to read in a dataframe for the sea surface csv with the same beam name
         sea_surface_df = pd.read_csv(os.path.join(log_dir, sea_surface_filename))
 
         # Compare the sea surface dataframe to the current beam dataframe "df".
         # Collects all rows from sea surface that are not in df
-        df_unique = sea_surface_df[~sea_surface_df.index_ph.isin(df.index_ph)]
+        df_unique = sea_surface_df[~sea_surface_df.index_ph.isin(df.index_ph)].copy(deep=True)
+
+        # If CoastNet classified the photon as 0, set it to 1. As PointNet++ has now determinted that photon is other. 
+        # If sea_surface_df.class_ph == 41 (sea surface), then set the class for spot_df at that same photon index to 5 (sea surface for PointNet)
+        df_unique.loc[df_unique['class_ph'] == 0, 'class_ph'] = 1
 
         # Add the unique sea surface photons back to the beam dataframe. 
         df_all = pd.concat([df, df_unique])
@@ -84,8 +89,8 @@ def main(args):
         df_all = df_all.sort_values(by=['index_ph'])
 
         # Add _pointnet tag to beam_file name to create the output filename
-        # Pointnet filename pattern = granule_name_gtxx_pointnet.csv
-        output_filename = beam_file + "_pointnet.csv"
+        # Pointnet filename pattern example = pointnet_beam_3.csv
+        output_filename = "pointnet_" + beam_file + ".csv"
         output_filepath = os.path.join(log_dir, output_filename)
 
         # This writes the output file to the ouput_0.5_merge directory instead of the top level data directory
@@ -93,7 +98,7 @@ def main(args):
         # output_filepath = os.path.join(output_dir, output_filename)
 
         #only write classifications to output file
-        df_all.to_csv(output_filepath, sep=',', index=False, header=True, columns=['class_ph'])
+        df_all.to_csv(output_filepath, sep=',', index=False, header=True, columns=['index_ph', 'class_ph'])
 
     print("Finished writing data!")
 
