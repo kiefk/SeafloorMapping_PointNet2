@@ -104,11 +104,16 @@ def convert(dataDir, utm=True, removeLand=True, removeIrrelevant=True, interval=
         TODO: Are interval, maxElev, minElev irrelevant because of CoastNet sea surface classification?
         TODO: Is UTM irrelevant due to easting and northing being provided in original beam data. 
     """
-    # Get all files in this directory that end in _input.csv
-    #   This will be the six beam files for the granule.
-    #   IceSAT-2 input filename pattern = gtxx_granule_name_input.csv 
-    beams = set(glob.glob(dataDir + "/*.csv")) - set(glob.glob(dataDir + "/*sea_surface.csv"))
-    # print(beams)
+
+
+    # Assuming that the input directory has a single bathy spot csv and a matching seasurface csv. 
+    # Get a single input spot file, representing one of the six spot files from a granule.
+    spot =  list(set(glob.glob(dataDir + "/*.csv")) - set(glob.glob(dataDir + "/seasurface*.csv")))[0] 
+    # print(f"spot filename: {spot}")
+
+    # Get the matching sea surface filename for the beam. 
+    sea_surface_filename = list(set(glob.glob(dataDir + "/*.csv")) - set(glob.glob(dataDir + "/bathy*.csv")))[0]
+    # print(f"sea surface filename: {sea_surface_filename}")  
 
     # Create a directory path for "csv_data" to store the output files of preprocess_beam
     output_dir = os.path.join(dataDir, 'csv_data')
@@ -117,152 +122,151 @@ def convert(dataDir, utm=True, removeLand=True, removeIrrelevant=True, interval=
     if not os.path.exists(output_dir):
         os.mkdir(output_dir)
 
-    #Get the JSON file that holds the per granule variables. 
-    json_name = glob.glob(dataDir + "/*.json")
 
-    with open(json_name[0], 'r') as file:
-        #Create a dictionary of the per granule variables from the JSON file
-        granule_vars = json.load(file)
+    print(f'Preprocessing {spot}...')
 
-    #Loop through the six beams
-    for filename in beams:
+    # Read in the csv file with pandas and store it in a spot dataframe
+    spot_df = pd.read_csv(spot)
 
-        print(f'Preprocessing {filename}...')
+    # Add a class column
+    spot_df['class'] = np.full((len(spot_df)), 3)
 
-        # Read in the csv file with pandas and store it in a beam dataframe
-        beam_df = pd.read_csv(filename)
+    # Remove sea surface photons, this section replaces the  findSurface()
 
-        # Add a class column
-        beam_df['class'] = np.full((len(beam_df)), 3)
+    # Get the sea surface filename for this beam
+    # IceSAT-2 input filename pattern = granule_name_gtxx.csv
+    # Sea Surface filename pattern = granule_name_gtxx_sea_surface.csv
+    # sea_surface_filename = os.path.splitext(os.path.basename(filename))[0] + "_sea_surface.csv"
+    # Use pandas to read in a dataframe for the sea surface csv with the same beam name
+    sea_surface_df = pd.read_csv(os.path.join(dataDir, sea_surface_filename))
 
-        # Remove sea surface photons, this section replaces the  findSurface()
+    # Assuming spot_df and sea_surface_df have the same number of rows/photons (they should)
+    # If sea_surface_df.class_ph == 41 (sea surface), then set the class for spot_df at that same photon index to 5 (sea surface for PointNet)
+    spot_df.loc[sea_surface_df.class_ph == 41, 'class'] = 5
+    
+    # Get the subset of the spot_df where class = 5 (sea surface)
+    df_subset = spot_df[spot_df['class'] == 5]
 
-        # Get the sea surface filename for this beam
-        # IceSAT-2 input filename pattern = granule_name_gtxx.csv
-        # Sea Surface filename pattern = granule_name_gtxx_sea_surface.csv
-        sea_surface_filename = os.path.splitext(os.path.basename(filename))[0] + "_sea_surface.csv"
-        # Use pandas to read in a dataframe for the sea surface csv with the same beam name
-        sea_surface_df = pd.read_csv(os.path.join(dataDir, sea_surface_filename))
+    # Take the average of the geoid corrected height of the sea surface photons.
+    mean = np.mean(df_subset['geoid_corr_h'])
+    # Only keep the photons that are lower than average water surface level to decrease data volume.
+    spot_df = spot_df[spot_df['geoid_corr_h'] < mean]
 
-        # Assuming beam_df and sea_surface_df have the same number of rows/photons (they should)
-        # If sea_surface_df.class_ph == 41 (sea surface), then set the class for beam_df at that same photon index to 5 (sea surface for PointNet)
-        beam_df.loc[sea_surface_df.class_ph == 41, 'class'] = 5
+    #End of findSurface() replacement
+
+    # Keep photons where the max_signal_conf is greater than or equal to 3.
+    # Keep photons where latitude is less than 9000.
+    spot_df = spot_df[(spot_df['max_signal_conf'] >= 3)
+                        & (spot_df['latitude'] < 9000)]
+
+    # Remove data outside reasonable boundaries
+    # Keep photons where geoid_corr_h is greater than -12,000
+    spot_df = spot_df[spot_df['geoid_corr_h'] > -12000]
+    
+    # TODO: Always true, so we should remove "removeIrrelevant" from the command line and if check, and just evalute the statement every time. 
+    # Remove irrelevant photons (deeper than 50m, higher than 10m)
+    if removeIrrelevant:
+        spot_df = spot_df[(spot_df["geoid_corr_h"] > minElev) & (spot_df["geoid_corr_h"] < maxElev)]
         
-        # Get the subset of the sea_surface_df where class_ph == 41 (sea surface)
-        df_subset = sea_surface_df[sea_surface_df.class_ph == 41]
-        # Take the average of the geoid corrected height of the sea surface photons.
-        mean = np.mean(df_subset['surface_ph'])
-        # Only keep the photons that are lower than average water surface level to decrease data volume.
-        beam_df = beam_df[beam_df['geoid_corrected_h'] < mean]
+    # Remove photons where the NDWI value is less than 0.3
+    # TODO: Always true, so we should remove "removeLand" from the command line and if check, and just evalute the statement every time. 
+    if removeLand:  
+        # Commented out while ndwi column is empty
+        # spot_df = spot_df[(spot_df["ndwi"] >= 0.3)]
+        # Remove photons for which the DEM is more than 50m above the geoid
+        spot_df = spot_df[(spot_df["dem_h"] - spot_df["geoid_corr_h"] < 50)]
 
-        #End of findSurface() replacement
+    # print(f"spot_df after remove land: {spot_df}")
 
-        # Keep photons where the max_signal_conf is greater than or equal to 3.
-        # Keep photons where lat_ph is less than 9000.
-        beam_df = beam_df[(beam_df['max_signal_conf'] >= 3)
-                            & (beam_df['lat_ph'] < 9000)]
+    # TESTING CODE: Log the along track distance of each beam
+    # log_along_track_path = dataDir + "/along_track_distance.txt"
+    # with open(log_along_track_path, "a+") as output_file:
+    #     output_file.write(f"{filename} Along-track distance: {spot_df['x_atc'].max() - spot_df['x_atc'].min()}\n")
 
-        # Remove data outside reasonable boundaries
-        # Keep photons where geoid_corrected_h is greater than -12,000
-        beam_df = beam_df[beam_df['geoid_corrected_h'] > -12000]
-        
-        # TODO: Always true, so we should remove "removeIrrelevant" from the command line and if check, and just evalute the statement every time. 
-        # Remove irrelevant photons (deeper than 50m, higher than 10m)
-        if removeIrrelevant:
-            beam_df = beam_df[(beam_df["geoid_corrected_h"] > minElev) & (beam_df["geoid_corrected_h"] < maxElev)]
-            
-        # Remove photons where the NDWI value is less than 0.3
-        # TODO: Always true, so we should remove "removeLand" from the command line and if check, and just evalute the statement every time. 
-        if removeLand:  
-            beam_df = beam_df[(beam_df["ndwi"] >= 0.3)]
+    # Drop unused columns
+    spot_df = spot_df.drop(['time', 'x_atc', 'y_atc', 'background_rate', 'dem_h', 'sigma_along', 'sigma_across', 'solar_elevation', 'wind_v', 'pointing_angle', 'ndwi', 'yapc_score', 'quality_ph'], axis=1)
 
-        # TESTING CODE: Log the along track distance of each beam
-        # log_along_track_path = dataDir + "/along_track_distance.txt"
-        # with open(log_along_track_path, "a+") as output_file:
-        #     output_file.write(f"{filename} Along-track distance: {beam_df['x_atc'].max() - beam_df['x_atc'].min()}\n")
+    # Rename columns to match expected names in split_data_bulk.py and generate_training_data.py
+    # TODO: Change downstream names to match original column names instead of renaming. Check split_data_bulk.py and generate_training_data.py and prediction files.
+    # TODO: Potentailly drop the lat and lon columns? I don't think they're used later. Check split_data_bulk.py and generate_training_data.py and prediction files.
+    spot_df = spot_df.rename(columns={'x_ph': 'x', 'y_ph': 'y', 'longitude': 'lon', 'latitude': 'lat', 'geoid_corr_h': 'elev',  'max_signal_conf': 'signal_conf_ph'})
+    # Change the order of the columns
+    spot_df = spot_df[['index_ph', 'x', 'y', 'lon', 'lat', 'elev', 'signal_conf_ph', 'class']]  
 
-        # Drop unused columns
-        beam_df = beam_df.drop(['x_atc', 'y_atc', 'sigma_along', 'sigma_across', 'sigma_h', 'delta_time', 'yapc', 'quality_ph', 'ndwi'], axis=1)
+    # Do normalization so all values are between 0 and 1
+    # df = (df - df.min()) / (df.max() - df.min())
 
-        # Rename columns to match expected names in split_data_bulk.py and generate_training_data.py
-        # TODO: Change downstream names to match original column names instead of renaming. Check split_data_bulk.py and generate_training_data.py and prediction files.
-        # TODO: Potentailly drop the lat and lon columns? I don't think they're used later. Check split_data_bulk.py and generate_training_data.py and prediction files.
-        beam_df = beam_df.rename(columns={'x_ph': 'x', 'y_ph': 'y', 'lon_ph': 'lon', 'lat_ph': 'lat', 'geoid_corrected_h': 'elev',  'max_signal_conf': 'signal_conf_ph'})
-        # Change the order of the columns
-        beam_df = beam_df[['index_ph', 'x', 'y', 'lon', 'lat', 'elev', 'signal_conf_ph', 'class']]  
+    # Round to three decimals for all variables
+    # TODO: Test this, this line was originally uncommented but a recent code update by the original author has it now deactivated.
+    # df = df.round(decimals=3)
 
-        # Do normalization so all values are between 0 and 1
-        # df = (df - df.min()) / (df.max() - df.min())
+    # Start of old findSurface() code: 
+    # TODO: Keep until we can test how CoastNet's surface identification effects the results of PointNet. 
 
-        # Round to three decimals for all variables
-        # TODO: Test this, this line was originally uncommented but a recent code update by the original author has it now deactivated.
-        # df = df.round(decimals=3)
+    # # Empty dataframe with the same column names as the spot_df.
+    # # Holds the segments of data as they're sent through the findSurface() function. 
+    # # TODO: findSurface() is obsolete, this is also no longer needed?
+    # df_segment_all = pd.DataFrame(columns=df.columns)
+    
+    # #Original method
+    # # num = math.ceil((df['y'].max() - df['y'].min()) / interval)
+    # # y1 = df['y'].min()
 
-        # Start of old findSurface() code: 
-        # TODO: Keep until we can test how CoastNet's surface identification effects the results of PointNet. 
-
-        # # Empty dataframe with the same column names as the beam_df.
-        # # Holds the segments of data as they're sent through the findSurface() function. 
-        # # TODO: findSurface() is obsolete, this is also no longer needed?
-        # df_segment_all = pd.DataFrame(columns=df.columns)
-        
-        # #Original method
-        # # num = math.ceil((df['y'].max() - df['y'].min()) / interval)
-        # # y1 = df['y'].min()
-
-        # #Segmenting by index_ph
-        # num_rows = df.index
-        # num = math.ceil(num_rows.max() / interval)
-        # y1 = 0
+    # #Segmenting by index_ph
+    # num_rows = df.index
+    # num = math.ceil(num_rows.max() / interval)
+    # y1 = 0
 
 
-        # # print(f"num: {num}")
-        # # print(f"y1: {y1}")
+    # # print(f"num: {num}")
+    # # print(f"y1: {y1}")
 
-        # for i in range(num):
-        #     y2 = y1 + interval
+    # for i in range(num):
+    #     y2 = y1 + interval
 
-        #     #Segmenting by index_ph
-        #     # If this is the last segment, make sure to copy the last photon
-        #     if i == num-1: 
-        #         df_segment = df.iloc[y1:].copy()
-        #     else:
-        #         df_segment = df.iloc[y1:y2].copy()
+    #     #Segmenting by index_ph
+    #     # If this is the last segment, make sure to copy the last photon
+    #     if i == num-1: 
+    #         df_segment = df.iloc[y1:].copy()
+    #     else:
+    #         df_segment = df.iloc[y1:y2].copy()
 
-        #     #Original method
-        #     # df_segment = df[(df['y'] >= y1) & (df['y'] < y2)].copy()
+    #     #Original method
+    #     # df_segment = df[(df['y'] >= y1) & (df['y'] < y2)].copy()
 
-        #     if not df_segment.empty:
-        #         df_segment = findSurface(df_segment, minElev, maxElev)
-        #         # If there is a weird distribution of points, skip this segment.
-        #         if df_segment.empty:
-        #             continue
+    #     if not df_segment.empty:
+    #         df_segment = findSurface(df_segment, minElev, maxElev)
+    #         # If there is a weird distribution of points, skip this segment.
+    #         if df_segment.empty:
+    #             continue
 
-        #         df_segment_all = pd.concat([df_segment_all, df_segment], ignore_index=True)
-        #     y1 = y2
+    #         df_segment_all = pd.concat([df_segment_all, df_segment], ignore_index=True)
+    #     y1 = y2
 
-        # df = df_segment_all
+    # df = df_segment_all
 
-        # End of old findSurface() code
+    # End of old findSurface() code
 
-        # Add "N" or "S" to utm_zone, this will be added to the name of the intermediate output files.
-        # TODO: Remove this by changing how split_data_bulk reads in the intermediate files, or move the
-        #   functionality of split_data_bulk.py into preprocess_beam.py.  
-        if beam_df["lat"].mean() > 0:
-            zone = granule_vars["utm_zone"] + "N"
-        else:
-            zone = granule_vars["utm_zone"] + "S"
+    # Add "N" or "S" to utm_zone, this will be added to the name of the intermediate output files.
+    # TODO: Remove this by changing how split_data_bulk reads in the intermediate files, or move the
+    #   functionality of split_data_bulk.py into preprocess_beam.py.  
+    if spot_df["lat"].mean() > 0:
+        # zone = granule_vars["utm_zone"] + "N"
+        zone = "utm_zone_N"
+    else:
+        # zone = granule_vars["utm_zone"] + "S"
+        zone = "utm_zone_S"
 
-        # Write data to csv file
-        output_filename = output_dir + "/" + os.path.splitext(os.path.basename(filename))[0] + "_" + zone + ".csv" 
-        
-        beam_df.to_csv(output_filename, index=False)
+    # Write data to csv file
+    output_filename = output_dir + "/" + os.path.splitext(os.path.basename(spot))[0] + "_" + zone + ".csv" 
+    
+    spot_df.to_csv(output_filename, index=False)
 
-        # Move the original files to new folder
-        # new_filename = os.path.join(dir, os.path.basename(filename))
-        # shutil.move(filename, new_filename)
+    # Move the original files to new folder
+    # new_filename = os.path.join(dir, os.path.basename(filename))
+    # shutil.move(filename, new_filename)
 
-        # print("H5 to CSV done!")
+    # print("H5 to CSV done!")
 
 def main(args):
     dataDir = args.data_dir
