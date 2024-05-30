@@ -17,6 +17,9 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 ROOT_DIR = BASE_DIR
 sys.path.append(os.path.join(ROOT_DIR, 'models'))
 
+# Set a manual_seed for reproducibilty of results. 
+torch.manual_seed(24)
+
 seg_classes = {'Seafloor': [0, 1]}
 #0 = other, 1 = seafloor/bathymetry
 
