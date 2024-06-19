@@ -80,13 +80,15 @@ def main(args):
         df_unique = sea_surface_df[~sea_surface_df.index_ph.isin(df.index_ph)].copy(deep=True)
 
         # If CoastNet classified the photon as 0, set it to 1. As PointNet++ has now determinted that photon is other. 
-        # If sea_surface_df.class_ph == 41 (sea surface), then set the class for spot_df at that same photon index to 5 (sea surface for PointNet)
         df_unique.loc[df_unique['class_ph'] == 0, 'class_ph'] = 1
 
         # Add the unique sea surface photons back to the beam dataframe. 
         df_all = pd.concat([df, df_unique])
         # Sort by photon index.
         df_all = df_all.sort_values(by=['index_ph'])
+
+        #If CoastNet classified the photon as 41, set it to 41.
+        df_all = df_all[sea_surface_df['class_ph'] == 41] = 41 
 
         # Add _pointnet tag to beam_file name to create the output filename
         # Pointnet filename pattern example = pointnet_beam_3.csv
